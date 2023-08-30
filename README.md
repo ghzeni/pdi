@@ -1,0 +1,2 @@
+# Pra rodar um projeto
+Abra a pasta do projeto no VSCode ou acesse pdi/pasta_do_projeto no terminal antes de digitar `python main.py`, pois o caminho dos arquivos a serem acessados está sem referência de pasta, ou seja, caso você rode por `$pdi/` ele vai dizer que não encontrou o arquivo a ser aberto.

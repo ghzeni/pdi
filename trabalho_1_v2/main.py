@@ -16,57 +16,156 @@ INPUT_IMAGE =  'arroz.bmp'
 
 # TODO: ajuste estes parâmetros!
 NEGATIVO = False
-THRESHOLD = 0.4
-ALTURA_MIN = 1
-LARGURA_MIN = 1
-N_PIXELS_MIN = 1
+THRESHOLD = 0.5
+ALTURA_MIN = 5
+LARGURA_MIN = 5
+N_PIXELS_MIN = 5
 
 #===============================================================================
 
 def binariza (img, threshold):
-    ''' Binarização simples por limiarização.
+    img_matrix = img
+    white = 1
+    black = 0
 
-Parâmetros: img: imagem de entrada. Se tiver mais que 1 canal, binariza cada
-              canal independentemente.
-            threshold: limiar.
-            
-Valor de retorno: versão binarizada da img_in.'''
-
-    # TODO: escreva o código desta função.
-    # Dica/desafio: usando a função np.where, dá para fazer a binarização muito
-    # rapidamente, e com apenas uma linha de código!
+    img_bin = np.where((img_matrix >= threshold), white, black)
+    return img_bin
 
 #-------------------------------------------------------------------------------
 
 def rotula (img, largura_min, altura_min, n_pixels_min):
-    '''Rotulagem usando flood fill. Marca os objetos da imagem com os valores
-[0.1,0.2,etc].
+    global width_img, height_img, nova_matriz, blob_list
+    height_img = img[0].size
+    width_img = int(img.size/height_img)
 
-Parâmetros: img: imagem de entrada E saída.
-            largura_min: descarta componentes com largura menor que esta.
-            altura_min: descarta componentes com altura menor que esta.
-            n_pixels_min: descarta componentes com menos pixels que isso.
+    nova_matriz = np.full((width_img, height_img), -1)
+    nova_matriz[0][0] = 0
 
-Valor de retorno: uma lista, onde cada item é um vetor associativo (dictionary)
-com os seguintes campos:
+    label = 0
+    for y in range (0, height_img):
+      for x in range (0, width_img):
+        if nova_matriz[x][y] == -1:
+          label += label
+          flood_fill(label, x, y) 
+    
+    # aqui já temos toda a nova_matriz labelada
 
-'label': rótulo do componente.
-'n_pixels': número de pixels do componente.
-'T', 'L', 'B', 'R': coordenadas do retângulo envolvente de um componente conexo,
-respectivamente: topo, esquerda, baixo e direita.'''
+    blob_list = []
 
-    # TODO: escreva esta função.
-    # Use a abordagem com flood fill recursivo.
+    # após toda a matriz estar com os devidos labels, agrupamos as blobs
+    # excluindo blobs pequenas demais
+    for y in range (0, height_img):
+      for x in range (0, width_img):
+        # se a coord checada não é 0 (background)
+        if nova_matriz[x][y] != 0:
+          # https://www.freecodecamp.org/news/how-to-check-if-a-key-exists-in-a-dictionary-in-python/
+          # if lista_de_blobs contains um blob cujo campo 'label' seja igual ao label atual
+          if len(blob_list) != 0:
+            for b in blob_list:
+              if b.get('label') is not None and b.get('label') == nova_matriz[x][y]:
+                print("Label value exists in the dictionary.")
+                # aumenta o número de pixels
+                b['n_pixels'] =+ 1
+                # atualiza os limites
+                b = update_boundries(b, x, y)
+              else:
+                # se não houver aquela blob ainda iniciada na blob_list
+                print("Label value does not exist in the dictionary.")
+                blob = {
+                  'label': nova_matriz[x][y],
+                  'n_pixels': 1,
+                  'T': (x, y), 
+                  'R': (x, y), 
+                  'B': (x, y), 
+                  'L': (x, y), 
+                }
+              blob_list.append(blob)
+          else:
+            # se a blob_list for vazia
+            blob = {
+              'label': nova_matriz[x][y],
+              'n_pixels': 1,
+              'T': (x, y), 
+              'R': (x, y), 
+              'B': (x, y), 
+              'L': (x, y), 
+            }
+            blob_list.append(blob)
+          
+    # limpa as que forem mini-blobs demais pra ser uma blob
+    for b in blob_list:
+      if (b['n_pixels'] < n_pixels_min) or (b['R'] - b['L'] < largura_min) or (b['T'] - b['B'] < altura_min):
+        blob_list.remove(b)
+
+    return blob_list
+
+def flood_fill(label, x0, y0):
+  nova_matriz[x0][y0] = 0
+
+  if img[x0][y0] == 1:
+      nova_matriz[x0][y0] = label
+  
+  res = checar_vizinhos(nova_matriz, x0, y0)
+  if res[0]:
+    flood_fill(label, res[1], res[2]) 
+
+def update_boundries(blob, x, y):
+  # não importa onde a coordenada tá em y, 
+  # só importa que ela é mais pra cima (menor valor) do que a y atual
+  if y < blob['T'].y:
+      blob['T']: (x, y)
+  if x > blob['R'].x:
+      blob['R']: (x, y)
+  if y > blob['B'].y:
+      blob['B']: (x, y)
+  if x < blob['L'].x:
+      blob['L']: (x, y)
+  return blob
+
+
+def checar_vizinhos(nova_matriz, x, y):
+  """ T """
+  if dentro_img(x,y-1) and not_bkg(x,y-1):
+    if nova_matriz[x][y-1] == -1:
+        return [True, x, y-1]          
+  
+  """ R """        
+  if dentro_img(x+1,y) and not_bkg(x+1,y):
+    if nova_matriz[x+1][y] == -1:         
+        return [True, x+1, y]       
+  
+  """ B """
+  if dentro_img(x,y+1) and not_bkg(x,y+1):
+    if nova_matriz[x][y+1] == -1:
+        return [True, x, y+1]            
+
+  """ L """
+  if dentro_img(x-1,y) and not_bkg(x-1,y):
+    if nova_matriz[x-1][y] == -1:
+      return [True, x-1, y]
+  return [False, 0, 0]        
+    
+def dentro_img (x, y):
+  if (x >= 0) and (x < width_img-1) and (y >= 0) and (y < height_img-1):
+    return True
+  return False
+
+def not_bkg (x, y):
+  if img[x][y] != 0:
+    return True
+
 
 #===============================================================================
 
 def main ():
 
     # Abre a imagem em escala de cinza.
+    global img
     img = cv2.imread (INPUT_IMAGE, cv2.IMREAD_GRAYSCALE)
     if img is None:
         print ('Erro abrindo a imagem.\n')
         sys.exit ()
+    print(type(img))
 
     # É uma boa prática manter o shape com 3 valores, independente da imagem ser
     # colorida ou não. Também já convertemos para float32.
@@ -79,9 +178,10 @@ def main ():
     # Segmenta a imagem.
     if NEGATIVO:
         img = 1 - img
-    img = binariza (img, THRESHOLD)
-    cv2.imshow ('01 - binarizada', img)
-    cv2.imwrite ('01 - binarizada.png', img*255)
+    imgb = binariza (img, THRESHOLD)
+    # cv2.imshow ('01 - binarizada', img)
+    # cv2.imwrite ('01 - binarizada.png', img*255)
+    progress(imgb)
 
     start_time = timeit.default_timer ()
     componentes = rotula (img, LARGURA_MIN, ALTURA_MIN, N_PIXELS_MIN)
@@ -95,6 +195,13 @@ def main ():
 
     cv2.imshow ('02 - out', img_out)
     cv2.imwrite ('02 - out.png', img_out*255)
+    cv2.waitKey ()
+    cv2.destroyAllWindows ()
+
+def progress(img_output):
+    img_output = img_output.astype(np.int8) * 255
+    cv2.imshow ('03 - progr', img_output)
+    cv2.imwrite ('03 - progr.png', img_output)
     cv2.waitKey ()
     cv2.destroyAllWindows ()
 

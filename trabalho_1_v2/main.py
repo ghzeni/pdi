@@ -16,7 +16,7 @@ INPUT_IMAGE =  'arroz.bmp'
 
 # TODO: ajuste estes parâmetros!
 NEGATIVO = False
-THRESHOLD = 0.5
+THRESHOLD = 0.8
 ALTURA_MIN = 5
 LARGURA_MIN = 5
 N_PIXELS_MIN = 5
@@ -41,12 +41,12 @@ def rotula (img, largura_min, altura_min, n_pixels_min):
     nova_matriz = np.full((width_img, height_img), -1)
     nova_matriz[0][0] = 0
 
-    label = 0
+    label = 1
     for y in range (0, height_img):
       for x in range (0, width_img):
         if nova_matriz[x][y] == -1:
-          label += label
           flood_fill(label, x, y) 
+          label += 1
     
     # aqui já temos toda a nova_matriz labelada
 
@@ -63,14 +63,12 @@ def rotula (img, largura_min, altura_min, n_pixels_min):
           if len(blob_list) != 0:
             for b in blob_list:
               if b.get('label') is not None and b.get('label') == nova_matriz[x][y]:
-                print("Label value exists in the dictionary.")
                 # aumenta o número de pixels
-                b['n_pixels'] =+ 1
+                b['n_pixels'] += 1
                 # atualiza os limites
                 b = update_boundries(b, x, y)
               else:
                 # se não houver aquela blob ainda iniciada na blob_list
-                print("Label value does not exist in the dictionary.")
                 blob = {
                   'label': nova_matriz[x][y],
                   'n_pixels': 1,
@@ -102,26 +100,27 @@ def rotula (img, largura_min, altura_min, n_pixels_min):
 def flood_fill(label, x0, y0):
   nova_matriz[x0][y0] = 0
 
-  if img[x0][y0] == 1:
+  if imgb[x0][y0] == 1:
       nova_matriz[x0][y0] = label
   
   res = checar_vizinhos(nova_matriz, x0, y0)
   if res[0]:
     flood_fill(label, res[1], res[2]) 
+  else:
+     return
 
 def update_boundries(blob, x, y):
   # não importa onde a coordenada tá em y, 
   # só importa que ela é mais pra cima (menor valor) do que a y atual
-  if y < blob['T'].y:
-      blob['T']: (x, y)
-  if x > blob['R'].x:
-      blob['R']: (x, y)
-  if y > blob['B'].y:
-      blob['B']: (x, y)
-  if x < blob['L'].x:
-      blob['L']: (x, y)
+  if y < blob['T'][1]:
+      blob['T'] = (x, y)
+  if x > blob['R'][0]:
+      blob['R'] = (x, y)
+  if y > blob['B'][1]:
+      blob['B'] = (x, y)
+  if x < blob['L'][0]:
+      blob['L'] = (x, y)
   return blob
-
 
 def checar_vizinhos(nova_matriz, x, y):
   """ T """
@@ -151,7 +150,7 @@ def dentro_img (x, y):
   return False
 
 def not_bkg (x, y):
-  if img[x][y] != 0:
+  if imgb[x][y] != 0:
     return True
 
 
@@ -160,7 +159,7 @@ def not_bkg (x, y):
 def main ():
 
     # Abre a imagem em escala de cinza.
-    global img
+    global img, imgb
     img = cv2.imread (INPUT_IMAGE, cv2.IMREAD_GRAYSCALE)
     if img is None:
         print ('Erro abrindo a imagem.\n')
@@ -179,12 +178,11 @@ def main ():
     if NEGATIVO:
         img = 1 - img
     imgb = binariza (img, THRESHOLD)
-    # cv2.imshow ('01 - binarizada', img)
-    # cv2.imwrite ('01 - binarizada.png', img*255)
-    progress(imgb)
+    progress('01 - binarizada', imgb)
+
 
     start_time = timeit.default_timer ()
-    componentes = rotula (img, LARGURA_MIN, ALTURA_MIN, N_PIXELS_MIN)
+    componentes = rotula (imgb, LARGURA_MIN, ALTURA_MIN, N_PIXELS_MIN)
     n_componentes = len (componentes)
     print ('Tempo: %f' % (timeit.default_timer () - start_time))
     print ('%d componentes detectados.' % n_componentes)
@@ -193,17 +191,12 @@ def main ():
     for c in componentes:
         cv2.rectangle (img_out, (c ['L'], c ['T']), (c ['R'], c ['B']), (0,0,1))
 
-    cv2.imshow ('02 - out', img_out)
-    cv2.imwrite ('02 - out.png', img_out*255)
-    cv2.waitKey ()
-    cv2.destroyAllWindows ()
+    progress ('02 - out', img_out)
 
-def progress(img_output):
+def progress(img_name, img_output):
     img_output = img_output.astype(np.int8) * 255
-    cv2.imshow ('03 - progr', img_output)
-    cv2.imwrite ('03 - progr.png', img_output)
-    cv2.waitKey ()
-    cv2.destroyAllWindows ()
+    cv2.imshow (img_name, img_output)
+    cv2.imwrite (img_name + '.png', img_output)
 
 
 if __name__ == '__main__':

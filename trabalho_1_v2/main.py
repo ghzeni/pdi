@@ -13,14 +13,14 @@ import matplotlib.pyplot as plt
 
 #===============================================================================
 
-INPUT_IMAGE =  'mini_img.png'
+INPUT_IMAGE =  'arroz.bmp'
 
 # TODO: ajuste estes parâmetros!
 NEGATIVO = False
-THRESHOLD = 0.2
-ALTURA_MIN = 5
-LARGURA_MIN = 5
-N_PIXELS_MIN = 5
+THRESHOLD = 0.8
+ALTURA_MIN = 8
+LARGURA_MIN = 8
+N_PIXELS_MIN = 12
 
 #===============================================================================
 
@@ -94,7 +94,7 @@ def rotula (img, largura_min, altura_min, n_pixels_min):
           
     # limpa as que forem mini-blobs demais pra ser uma blob
     for b in blob_list:
-      if (b['n_pixels'] < n_pixels_min) or (b['R'] - b['L'] < largura_min) or (b['T'] - b['B'] < altura_min):
+      if (b['n_pixels'] < n_pixels_min) or (b['R'][0] - b['L'][0] < largura_min) or (b['B'][1] - b['T'][1] < altura_min):
         blob_list.remove(b)
       
     # TODO
@@ -186,8 +186,9 @@ def main ():
     if NEGATIVO:
         img = 1 - img
     imgb = binariza (img, THRESHOLD)
-    cv2.imshow ('01 - binarizada', img)
-    cv2.imwrite ('01 - binarizada.png', img*255)
+    cv2.imwrite ('01 - binarizada.png', imgb.astype(np.int8) * 255)
+    imgshow = cv2.imread('01 - binarizada.png', 0)
+    cv2.imshow ('01 - binarizada', imgshow)
 
 
     start_time = timeit.default_timer ()
@@ -198,7 +199,7 @@ def main ():
 
     # Mostra os objetos encontrados.
     for c in componentes:
-        cv2.rectangle (img_out, (c ['L'], c ['T']), (c ['R'], c ['B']), (0,0,1))
+        cv2.rectangle (img_out, (c ['L'][1], c ['T'][0]), (c ['R'][1], c ['B'][0]), (0,0,255))
 
     cv2.imshow ('02 - out', img_out)
     cv2.imwrite ('02 - out.png', img_out*255)

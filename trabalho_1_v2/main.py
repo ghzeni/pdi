@@ -9,17 +9,18 @@ import sys
 import timeit
 import numpy as np
 import cv2
+import matplotlib.pyplot as plt
 
 #===============================================================================
 
-INPUT_IMAGE =  'arroz.bmp'
+INPUT_IMAGE =  'mini_img.png'
 
 # TODO: ajuste estes parâmetros!
 NEGATIVO = False
 THRESHOLD = 0.8
-ALTURA_MIN = 5
-LARGURA_MIN = 5
-N_PIXELS_MIN = 5
+ALTURA_MIN = 2
+LARGURA_MIN = 2
+N_PIXELS_MIN = 2
 
 #===============================================================================
 
@@ -38,15 +39,17 @@ def rotula (img, largura_min, altura_min, n_pixels_min):
     height_img = img[0].size
     width_img = int(img.size/height_img)
 
-    nova_matriz = np.full((width_img, height_img), -1)
-    nova_matriz[0][0] = 0
+    nova_matriz = np.where((img == 1), -1, 0)
 
     label = 1
-    for y in range (0, height_img):
-      for x in range (0, width_img):
+    for y in range (0, height_img-1):
+      for x in range (0, width_img-1):
+        # só olha se for -1, se não nem olha
         if nova_matriz[x][y] == -1:
           flood_fill(label, x, y) 
           label += 1
+      if y == 15:
+        print ('a')
     
     # aqui já temos toda a nova_matriz labelada
 
@@ -54,34 +57,35 @@ def rotula (img, largura_min, altura_min, n_pixels_min):
 
     # após toda a matriz estar com os devidos labels, agrupamos as blobs
     # excluindo blobs pequenas demais
-    for y in range (0, height_img):
-      for x in range (0, width_img):
+    for y in range (0, height_img-1):
+      for x in range (0, width_img-1):
         # se a coord checada não é 0 (background)
-        if nova_matriz[x][y] != 0:
+        if nova_matriz[x][y][0] != 0:
           # https://www.freecodecamp.org/news/how-to-check-if-a-key-exists-in-a-dictionary-in-python/
           # if lista_de_blobs contains um blob cujo campo 'label' seja igual ao label atual
           if len(blob_list) != 0:
             for b in blob_list:
-              if b.get('label') is not None and b.get('label') == nova_matriz[x][y]:
+              # encontrar 'label' == 1 na blob_list -> não é get('label')
+              if blob_list.get('label') is not None and b.get('label') == nova_matriz[x][y][0]:
                 # aumenta o número de pixels
                 b['n_pixels'] += 1
                 # atualiza os limites
                 b = update_boundries(b, x, y)
-              else:
+              elif blob_list.get('label') is None:
                 # se não houver aquela blob ainda iniciada na blob_list
                 blob = {
-                  'label': nova_matriz[x][y],
+                  'label': nova_matriz[x][y][0],
                   'n_pixels': 1,
                   'T': (x, y), 
                   'R': (x, y), 
                   'B': (x, y), 
                   'L': (x, y), 
                 }
-              blob_list.append(blob)
+                blob_list.append(blob)
           else:
             # se a blob_list for vazia
             blob = {
-              'label': nova_matriz[x][y],
+              'label': nova_matriz[x][y][0],
               'n_pixels': 1,
               'T': (x, y), 
               'R': (x, y), 
@@ -98,10 +102,8 @@ def rotula (img, largura_min, altura_min, n_pixels_min):
     return blob_list
 
 def flood_fill(label, x0, y0):
-  nova_matriz[x0][y0] = 0
 
-  if imgb[x0][y0] == 1:
-      nova_matriz[x0][y0] = label
+  nova_matriz[x0][y0] = label
   
   res = checar_vizinhos(nova_matriz, x0, y0)
   if res[0]:
@@ -195,9 +197,8 @@ def main ():
 
 def progress(img_name, img_output):
     img_output = img_output.astype(np.int8) * 255
-    cv2.imshow (img_name, img_output)
+    # cv2.imshow (img_name, img_output)
     cv2.imwrite (img_name + '.png', img_output)
-
 
 if __name__ == '__main__':
     main ()

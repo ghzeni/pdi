@@ -13,14 +13,14 @@ import matplotlib.pyplot as plt
 
 #===============================================================================
 
-INPUT_IMAGE =  'mini_img.png'
+INPUT_IMAGE =  'arroz.bmp'
 
 # TODO: ajuste estes parâmetros!
 NEGATIVO = False
-THRESHOLD = 0.8
-ALTURA_MIN = 2
-LARGURA_MIN = 2
-N_PIXELS_MIN = 2
+THRESHOLD = 0.7
+ALTURA_MIN = 5
+LARGURA_MIN = 5
+N_PIXELS_MIN = 5
 
 #===============================================================================
 
@@ -48,8 +48,6 @@ def rotula (img, largura_min, altura_min, n_pixels_min):
         if nova_matriz[x][y] == -1:
           flood_fill(label, x, y) 
           label += 1
-      if y == 15:
-        print ('a')
     
     # aqui já temos toda a nova_matriz labelada
 
@@ -60,28 +58,29 @@ def rotula (img, largura_min, altura_min, n_pixels_min):
     for y in range (0, height_img-1):
       for x in range (0, width_img-1):
         # se a coord checada não é 0 (background)
-        if nova_matriz[x][y][0] != 0:
-          # https://www.freecodecamp.org/news/how-to-check-if-a-key-exists-in-a-dictionary-in-python/
-          # if lista_de_blobs contains um blob cujo campo 'label' seja igual ao label atual
+        label_atual = nova_matriz[x][y][0]
+        if label_atual != 0:
           if len(blob_list) != 0:
-            for b in blob_list:
-              # encontrar 'label' == 1 na blob_list -> não é get('label')
-              if blob_list.get('label') is not None and b.get('label') == nova_matriz[x][y][0]:
-                # aumenta o número de pixels
-                b['n_pixels'] += 1
-                # atualiza os limites
-                b = update_boundries(b, x, y)
-              elif blob_list.get('label') is None:
-                # se não houver aquela blob ainda iniciada na blob_list
-                blob = {
-                  'label': nova_matriz[x][y][0],
-                  'n_pixels': 1,
-                  'T': (x, y), 
-                  'R': (x, y), 
-                  'B': (x, y), 
-                  'L': (x, y), 
-                }
-                blob_list.append(blob)
+            # https://www.freecodecamp.org/news/how-to-check-if-a-key-exists-in-a-dictionary-in-python/
+            # if lista_de_blobs contains um blob cujo campo 'label' seja igual ao label atual
+            if ('label', label_atual) in blob_list:
+              for b in blob_list:
+                if b.get('label') == label_atual:
+                  # aumenta o número de pixels
+                  b['n_pixels'] += 1
+                  # atualiza os limites
+                  b = update_boundries(b, x, y)
+            # se não houver uma blob inicializada com aquele label até o momento
+            else:
+              blob = {
+                'label': label_atual,
+                'n_pixels': 1,
+                'T': (x, y), 
+                'R': (x, y), 
+                'B': (x, y), 
+                'L': (x, y), 
+              }
+              blob_list.append(blob)
           else:
             # se a blob_list for vazia
             blob = {
@@ -166,7 +165,6 @@ def main ():
     if img is None:
         print ('Erro abrindo a imagem.\n')
         sys.exit ()
-    print(type(img))
 
     # É uma boa prática manter o shape com 3 valores, independente da imagem ser
     # colorida ou não. Também já convertemos para float32.

@@ -13,11 +13,11 @@ import matplotlib.pyplot as plt
 
 #===============================================================================
 
-INPUT_IMAGE =  'arroz.bmp'
+INPUT_IMAGE =  'mini_img.png'
 
 # TODO: ajuste estes parâmetros!
 NEGATIVO = False
-THRESHOLD = 0.7
+THRESHOLD = 0.2
 ALTURA_MIN = 5
 LARGURA_MIN = 5
 N_PIXELS_MIN = 5
@@ -45,7 +45,7 @@ def rotula (img, largura_min, altura_min, n_pixels_min):
     for y in range (0, height_img-1):
       for x in range (0, width_img-1):
         # só olha se for -1, se não nem olha
-        if nova_matriz[x][y] == -1:
+        if nova_matriz[x][y][0] == -1:
           flood_fill(label, x, y) 
           label += 1
     
@@ -63,15 +63,14 @@ def rotula (img, largura_min, altura_min, n_pixels_min):
           if len(blob_list) != 0:
             # https://www.freecodecamp.org/news/how-to-check-if-a-key-exists-in-a-dictionary-in-python/
             # if lista_de_blobs contains um blob cujo campo 'label' seja igual ao label atual
-            if ('label', label_atual) in blob_list:
-              for b in blob_list:
-                if b.get('label') == label_atual:
-                  # aumenta o número de pixels
+            label_existe = False
+            for b in blob_list:
+               if b['label'] == label_atual:
+                  label_existe = True
                   b['n_pixels'] += 1
-                  # atualiza os limites
                   b = update_boundries(b, x, y)
             # se não houver uma blob inicializada com aquele label até o momento
-            else:
+            if not label_existe:
               blob = {
                 'label': label_atual,
                 'n_pixels': 1,
@@ -97,6 +96,14 @@ def rotula (img, largura_min, altura_min, n_pixels_min):
     for b in blob_list:
       if (b['n_pixels'] < n_pixels_min) or (b['R'] - b['L'] < largura_min) or (b['T'] - b['B'] < altura_min):
         blob_list.remove(b)
+      
+    # TODO
+    # encontra blobs que sejam a mesma blob particionada em duas e as junta
+    # pra cada blob
+      # se os limites forem vizinhos
+      # soma os numeros de pixels, atualiza as boundries
+      # remove o que tiver índice maior na lista
+
 
     return blob_list
 
@@ -126,24 +133,24 @@ def update_boundries(blob, x, y):
 def checar_vizinhos(nova_matriz, x, y):
   """ T """
   if dentro_img(x,y-1) and not_bkg(x,y-1):
-    if nova_matriz[x][y-1] == -1:
-        return [True, x, y-1]          
+    if nova_matriz[x][y-1][0] == -1:
+        return [True, x, y-1]
   
   """ R """        
   if dentro_img(x+1,y) and not_bkg(x+1,y):
-    if nova_matriz[x+1][y] == -1:         
-        return [True, x+1, y]       
+    if nova_matriz[x+1][y][0] == -1:         
+        return [True, x+1, y]
   
   """ B """
   if dentro_img(x,y+1) and not_bkg(x,y+1):
-    if nova_matriz[x][y+1] == -1:
-        return [True, x, y+1]            
+    if nova_matriz[x][y+1][0] == -1:
+        return [True, x, y+1]
 
   """ L """
   if dentro_img(x-1,y) and not_bkg(x-1,y):
-    if nova_matriz[x-1][y] == -1:
+    if nova_matriz[x-1][y][0] == -1:
       return [True, x-1, y]
-  return [False, 0, 0]        
+  return [False, 0, 0]
     
 def dentro_img (x, y):
   if (x >= 0) and (x < width_img-1) and (y >= 0) and (y < height_img-1):
@@ -153,6 +160,7 @@ def dentro_img (x, y):
 def not_bkg (x, y):
   if imgb[x][y] != 0:
     return True
+  return False
 
 
 #===============================================================================
@@ -178,7 +186,8 @@ def main ():
     if NEGATIVO:
         img = 1 - img
     imgb = binariza (img, THRESHOLD)
-    progress('01 - binarizada', imgb)
+    cv2.imshow ('01 - binarizada', img)
+    cv2.imwrite ('01 - binarizada.png', img*255)
 
 
     start_time = timeit.default_timer ()
@@ -191,14 +200,12 @@ def main ():
     for c in componentes:
         cv2.rectangle (img_out, (c ['L'], c ['T']), (c ['R'], c ['B']), (0,0,1))
 
-    progress ('02 - out', img_out)
-
-def progress(img_name, img_output):
-    img_output = img_output.astype(np.int8) * 255
-    # cv2.imshow (img_name, img_output)
-    cv2.imwrite (img_name + '.png', img_output)
+    cv2.imshow ('02 - out', img_out)
+    cv2.imwrite ('02 - out.png', img_out*255)
+    cv2.waitKey ()
+    cv2.destroyAllWindows ()
 
 if __name__ == '__main__':
     main ()
-
+    
 #===============================================================================

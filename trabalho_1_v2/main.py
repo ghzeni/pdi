@@ -9,6 +9,7 @@ import sys
 import timeit
 import numpy as np
 import cv2
+import math as m
 
 #===============================================================================
 
@@ -17,9 +18,9 @@ INPUT_IMAGE =  'arroz.bmp'
 # TODO: ajuste estes parâmetros!
 NEGATIVO = False
 THRESHOLD = 0.8
-ALTURA_MIN = 8
-LARGURA_MIN = 8
-N_PIXELS_MIN = 12
+ALTURA_MIN = 15
+LARGURA_MIN = 15
+N_PIXELS_MIN = 30
 
 #===============================================================================
 
@@ -33,20 +34,22 @@ def binariza (img, threshold):
 
 #-------------------------------------------------------------------------------
 
-def rotula (img, largura_min, altura_min, n_pixels_min):
+def rotula (binarizada, largura_min, altura_min, n_pixels_min):
     global width_img, height_img, nova_matriz, blob_list
-    height_img = img[0].size
-    width_img = int(img.size/height_img)
+    height_img = binarizada[0].size
+    width_img = int(binarizada.size/height_img)
 
-    nova_matriz = np.where((img == 1), -1, 0)
+    nova_matriz = np.where((binarizada == 1), -1, 0)
 
     label = 1
     for y in range (0, height_img-1):
       for x in range (0, width_img-1):
         # só olha se for -1, se não nem olha
         if nova_matriz[x][y][0] == -1:
+          print (x, y)
           flood_fill(label, x, y) 
           label += 1
+          
     
     # aqui já temos toda a nova_matriz labelada
 
@@ -60,8 +63,6 @@ def rotula (img, largura_min, altura_min, n_pixels_min):
         label_atual = nova_matriz[x][y][0]
         if label_atual != 0:
           if len(blob_list) != 0:
-            # https://www.freecodecamp.org/news/how-to-check-if-a-key-exists-in-a-dictionary-in-python/
-            # if lista_de_blobs contains um blob cujo campo 'label' seja igual ao label atual
             label_existe = False
             for b in blob_list:
                if b['label'] == label_atual:
@@ -90,31 +91,35 @@ def rotula (img, largura_min, altura_min, n_pixels_min):
               'L': (x, y), 
             }
             blob_list.append(blob)
-          
+      
     # limpa as que forem mini-blobs demais pra ser uma blob
     for b in blob_list:
       if (b['n_pixels'] < n_pixels_min) or (b['R'][0] - b['L'][0] < largura_min) or (b['B'][1] - b['T'][1] < altura_min):
         blob_list.remove(b)
-      
-    # TODO
-    # encontra blobs que sejam a mesma blob particionada em duas e as junta
-    # pra cada blob
-      # se os limites forem vizinhos
-      # soma os numeros de pixels, atualiza as boundries
-      # remove o que tiver índice maior na lista
-
-
+    
     return blob_list
 
 def flood_fill(label, x0, y0):
 
   nova_matriz[x0][y0] = label
+
+  """ T """
+  if dentro_img(x0,y0-1) and not_bkg(x0,y0-1) and nova_matriz[x0][y0-1][0] == -1:
+    flood_fill(label, x0, y0-1)
+
+  """ R """        
+  if dentro_img(x0+1,y0) and not_bkg(x0+1,y0) and nova_matriz[x0+1][y0][0] == -1:         
+    flood_fill(label, x0+1, y0)
+
+  """ B """
+  if dentro_img(x0,y0+1) and not_bkg(x0,y0+1) and nova_matriz[x0][y0+1][0] == -1:
+    flood_fill(label, x0, y0+1)
   
-  res = checar_vizinhos(nova_matriz, x0, y0)
-  if res[0]:
-    flood_fill(label, res[1], res[2]) 
-  else:
-     return
+  """ L """
+  if dentro_img(x0-1,y0) and not_bkg(x0-1,y0) and nova_matriz[x0-1][y0][0] == -1:
+    flood_fill(label, x0-1, y0)
+
+  return
 
 def update_boundries(blob, x, y):
   # não importa onde a coordenada tá em y, 
@@ -128,28 +133,6 @@ def update_boundries(blob, x, y):
   if x < blob['L'][0]:
       blob['L'] = (x, y)
   return blob
-
-def checar_vizinhos(nova_matriz, x, y):
-  """ T """
-  if dentro_img(x,y-1) and not_bkg(x,y-1):
-    if nova_matriz[x][y-1][0] == -1:
-        return [True, x, y-1]
-  
-  """ R """        
-  if dentro_img(x+1,y) and not_bkg(x+1,y):
-    if nova_matriz[x+1][y][0] == -1:         
-        return [True, x+1, y]
-  
-  """ B """
-  if dentro_img(x,y+1) and not_bkg(x,y+1):
-    if nova_matriz[x][y+1][0] == -1:
-        return [True, x, y+1]
-
-  """ L """
-  if dentro_img(x-1,y) and not_bkg(x-1,y):
-    if nova_matriz[x-1][y][0] == -1:
-      return [True, x-1, y]
-  return [False, 0, 0]
     
 def dentro_img (x, y):
   if (x >= 0) and (x < width_img-1) and (y >= 0) and (y < height_img-1):
@@ -160,7 +143,6 @@ def not_bkg (x, y):
   if imgb[x][y] != 0:
     return True
   return False
-
 
 #===============================================================================
 

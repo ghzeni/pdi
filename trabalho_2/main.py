@@ -16,10 +16,10 @@ import math as m
 #===============================================================================
 
 #TODO: ajustar
-INPUT_IMAGE =  'arroz_mini.bmp'
+INPUT_IMAGE =  'mini_img.png'
 ENABLE_GUI = False
-JANELA_W = 5
-JANELA_H = 5
+JANELA_W = 3
+JANELA_H = 3
 
 #===============================================================================
 
@@ -86,19 +86,16 @@ def separable_blur(img_entrada, width, height):
 
 def integral_blur(img_entrada, width, height):
   img_integral = np.empty_like (img_entrada)
-  img_integral_test = np.empty_like (img_entrada)
   img_blur = np.empty_like (img_entrada)
 
   h_img = img_entrada.shape [0] 
   w_img = img_entrada.shape [1]
 
-  def cap(numero):
-    if numero >= w_img: 
-      return int(w_img-1)
-    elif numero >= h_img:
-      return int(h_img-1)
-    elif numero < 0:
+  def cap(numero, limite):
+    if numero < 0:
       return 0
+    elif numero >= limite: 
+      return limite-1
     else:
       return numero
     
@@ -119,50 +116,29 @@ def integral_blur(img_entrada, width, height):
         img_integral[y, x, c] = img_integral[y, x, c] + img_integral[y-1, x, c]
         
   for c in range(0, 3): # 0, 1, 2
-
     for y in range(0, h_img):
       for x in range(0, w_img):
         soma = 0
-        upper_left = False
-        upper_right = False
-        lower_left = False
-        lower_right = False
+        upper_left, upper_right, lower_left, lower_right = False, False, False, False
 
-        if (y == 0 and x == 0):
-          lower_right = True
-        elif (y == 0 and x == w_img-1):
-          lower_right = True
-          lower_left = True
-        elif (y == h_img-1, x == 0):
-          lower_right = True
-          upper_right = True
-
-        elif (y == h_img-1, x == w_img-1):
-          upper_left, upper_right, lower_left, lower_right = True
-        elif (y == 0):
-          lower_right = True
-          lower_left = True
-        elif (y == h_img-1):
-          upper_left, upper_right, lower_left, lower_right = True
-        elif (x == 0):
-          lower_right = True
-          upper_right = True
-        elif (x == w_img-1):
-          upper_left, upper_right, lower_left, lower_right = True
-        else:
-          upper_left, upper_right, lower_left, lower_right = True
+        if (y == 0 and x == 0): lower_right = True
+        elif (y == 0 and x == w_img-1): lower_right, lower_left = True, True
+        elif (y == h_img-1 and x == 0): lower_right, upper_right = True, True
+        elif (y == 0): lower_right, lower_left = True, True
+        elif (x == 0): lower_right, upper_right = True, True
+        else: upper_left, upper_right, lower_left, lower_right = True, True, True, True
 
         if lower_right:
-          soma = soma + img_integral[cap(y+height//2), cap(x+width//2), c]
+          soma = img_integral[cap(y+height//2, height), cap(x+width//2, width), c]
         
         if upper_right:
-          soma = soma - img_integral[cap(y-height//2-1), cap(x+width//2), c]
+          soma -= img_integral[cap(y-height//2-1, height), cap(x+width//2, width), c]
         
         if lower_left:
-          soma = soma - img_integral[cap(y+height//2), cap(x-width//2-1), c]
+          soma -= img_integral[cap(y+height//2, height), cap(x-width//2-1, width), c]
         
         if upper_left:
-          soma = soma + img_integral[cap(y-height//2+1), cap(x-width//2), c]
+          soma += img_integral[cap(y-height//2+1, height), cap(x-width//2, width), c]
 
         img_blur[y, x, c] = soma/(width*height)
 

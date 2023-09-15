@@ -16,16 +16,14 @@ import math as m
 #===============================================================================
 
 #TODO: ajustar
-INPUT_IMAGE =  '01 - naive-blur.bmp'
+INPUT_IMAGE =  'arroz_mini.bmp'
 ENABLE_GUI = False
-JANELA_W = 3
-JANELA_H = 3
+JANELA_W = 5
+JANELA_H = 5
 
 #===============================================================================
 
 def naive_blur(img_entrada, width, height):
-
-  print (img_entrada.shape)
 
   img_blur = np.empty_like (img_entrada)
 
@@ -55,7 +53,6 @@ def naive_blur(img_entrada, width, height):
                     soma += img_entrada[yw, xw, c]
             img_blur[y, x, c] = soma/(width*height)
   
-  print (img_blur.shape)
   return img_blur
                 
 
@@ -87,119 +84,85 @@ def separable_blur(img_entrada, width, height):
 
 #-------------------------------------------------------------------------------
 
-#-------------------------------------------------------------------------------
-
-
-
 def integral_blur(img_entrada, width, height):
   img_integral = np.empty_like (img_entrada)
+  img_integral_test = np.empty_like (img_entrada)
   img_blur = np.empty_like (img_entrada)
 
-  w_img = img_entrada.shape [0] 
-  h_img = img_entrada.shape [1]
+  h_img = img_entrada.shape [0] 
+  w_img = img_entrada.shape [1]
 
   def cap(numero):
-    if numero >= w_img:
-       return int(w_img-1)
-    if numero >= h_img:
-       return int(h_img-1)
-    if numero < 0:
-       return 0
+    if numero >= w_img: 
+      return int(w_img-1)
+    elif numero >= h_img:
+      return int(h_img-1)
+    elif numero < 0:
+      return 0
+    else:
+      return numero
     
   for c in range(0, 3): # 0, 1, 2
 
-    # passa somando os valores apenas nas linhas
-    for y in range(0, w_img): # pra cada linha
+    for y in range(0, h_img): 
       img_integral [y, 0, c] = img_entrada[y, 0, c]
-      for x in range(1, h_img): # pra cada coluna menos a primeira
-        # img integral é o pixel atual + a soma dos que estão acima e à esquerda dele
-        img_integral[y, x, c] = img_entrada[y, x, c] + img_integral[y, x-1, c]
 
-    # passa somando os valores já somados, agora verticalmente
-    for y in range(1, w_img):
-      #TODO: testar
+    for x in range(0, w_img): 
       img_integral [0, x, c] = img_entrada[0, x, c]
-      for x in range (0, h_img):
+    
+    for y in range(0, h_img): 
+      for x in range(1, w_img): 
+        img_integral[y, x, c] = img_integral[y, x, c] + img_integral[y, x-1, c]
+
+    for x in range (0, w_img):
+      for y in range(1, h_img):
         img_integral[y, x, c] = img_integral[y, x, c] + img_integral[y-1, x, c]
+        
+  for c in range(0, 3): # 0, 1, 2
 
-    print (img_integral.shape)
-
-    for y in range(width//2, (w_img-width//2)):
-      for x in range(height//2, (h_img-height//2)):
+    for y in range(0, h_img):
+      for x in range(0, w_img):
         soma = 0
         upper_left = False
         upper_right = False
         lower_left = False
         lower_right = False
 
-        # 9 casos:
-        # 1) canto superior esquerdo
         if (y == 0 and x == 0):
-          # - apenas somo o pixel dentro do canto inferior direito de uma janela
           lower_right = True
-        # 2) canto superior direito
         elif (y == 0 and x == w_img-1):
-          # - somo o pixel dentro do canto inferior direito de uma janela
           lower_right = True
-          # - subtraio o pixel que tá à esquerda do canto inferior esquerdo de uma janela
           lower_left = True
-        # 3) canto inferior esquerdo
         elif (y == h_img-1, x == 0):
-          # - somo o pixel dentro do canto inferior direito de uma janela
           lower_right = True
-          # - subtraio o pixel que tá acima do canto superior direito de uma janela
           upper_right = True
 
-        # 4) canto inferior direito
         elif (y == h_img-1, x == w_img-1):
-          # - todas as operações
           upper_left, upper_right, lower_left, lower_right = True
-        # 5) borda superior
         elif (y == 0):
-          # - somo pixel dentro do canto inferior direito de uma janela
           lower_right = True
-          # - subtraio o pixel que tá à esquerda do canto inferior esquerdo de uma janela
           lower_left = True
-        # 6) borda inferior
         elif (y == h_img-1):
-          # - todas
           upper_left, upper_right, lower_left, lower_right = True
-
-        # 7) borda esquerda
         elif (x == 0):
-          # - somo pixel dentro do canto inferior direito de uma janela
           lower_right = True
-          # - subtraio o pixel que tá acima do canto superior direito de uma janela
           upper_right = True
-        # 8) borda direita
         elif (x == w_img-1):
-          # - todas
           upper_left, upper_right, lower_left, lower_right = True
-        # 9) não é borda
         else:
-          # cap() cuida disso
           upper_left, upper_right, lower_left, lower_right = True
-
-        print (img_integral.shape)
-        print (img_integral[cap(y+width//2), cap(x+width//2), c])
 
         if lower_right:
-          # somo pixel dentro do canto inferior direito de uma janela
-          print (img_integral[cap(y+width//2), cap(x+width//2), c])
-
-          soma = soma + img_integral[cap(y+width//2), cap(x+width//2), c]
+          soma = soma + img_integral[cap(y+height//2), cap(x+width//2), c]
         
         if upper_right:
-          # subtraio o pixel que tá acima do canto superior direito de uma janela
-          soma = soma - img_integral[cap(y-width//2-1), cap(x+width//2), c]
+          soma = soma - img_integral[cap(y-height//2-1), cap(x+width//2), c]
         
         if lower_left:
-          # subtraio o pixel que tá à esquerda do canto inferior esquerdo de uma janela
-          soma = soma - img_integral[cap(y+width//2), cap(x-width//2-1), c]
+          soma = soma - img_integral[cap(y+height//2), cap(x-width//2-1), c]
         
         if upper_left:
-          # somo de novo o pixel à esquerda e acima da parte esquerda superior de uma janela
-          soma = soma + img_integral[cap(y-width//2+1), cap(x-width//2), c]
+          soma = soma + img_integral[cap(y-height//2+1), cap(x-width//2), c]
 
         img_blur[y, x, c] = soma/(width*height)
 
@@ -234,37 +197,25 @@ def main ():
 
     # Inicia o timer
     start_time = timeit.default_timer ()
-    """ 
-    # Ingênuo
-    img_naive = naive_blur(img, JANELA_W, JANELA_H)
-    # cv2.imwrite ('01 - naive-blur.bmp', img_naive*255)
-    # imgshow = cv2.imread('01 - naive-blur.bmp')
-    # cv2.imshow ('01 - naive-blur', imgshow)
-    cv2.imshow ('01 - naive-blur', img_naive)
 
+    # Ingênuo
+    # img_naive = naive_blur(img, JANELA_W, JANELA_H)
     print ('naive-blur finalizado.')
     print ('Tempo: %f' % (timeit.default_timer () - start_time))
 
     # Separável
-    img_separable = separable_blur(img, JANELA_W, JANELA_H)
-    # cv2.imwrite ('01 - naive-blur.bmp', img_naive*255)
-    # imgshow = cv2.imread('01 - naive-blur.bmp')
-    # cv2.imshow ('01 - naive-blur', imgshow)
-    cv2.imshow ('02 - separable-blur', img_separable)
- """
+    # img_separable = separable_blur(img, JANELA_W, JANELA_H)
     print ('separable-blur finalizado.')
     print ('Tempo: %f' % (timeit.default_timer () - start_time))
 
     # Integral
     img_int = integral_blur(img, JANELA_W, JANELA_H)
-    # cv2.imwrite ('01 - naive-blur.bmp', img_naive*255)
-    # imgshow = cv2.imread('01 - naive-blur.bmp')
-    # cv2.imshow ('01 - naive-blur', imgshow)
-    cv2.imshow ('03 - integral-blur', img_int)
-
-    print ('naive-blur finalizado.')
+    print ('integral-blur finalizado.')
     print ('Tempo: %f' % (timeit.default_timer () - start_time))
 
+    # cv2.imshow ('01 - naive-blur', img_naive)
+    # cv2.imshow ('02 - separable-blur', img_separable)
+    cv2.imshow ('03 - integral-blur', img_int)
     cv2.imshow ('00 - img original', img_out)
     cv2.waitKey ()
     cv2.destroyAllWindows ()

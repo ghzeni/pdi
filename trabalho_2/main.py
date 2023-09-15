@@ -52,8 +52,8 @@ def naive_blur(img_entrada, width, height):
             soma = 0
             for yw in range(y-height//2, y+height//2+1): # divisão de inteiro // yw = ywindow
                 for xw in range(x-width//2, x+width//2+1):
-                    soma += img_entrada[yw, xw][c]
-            img_blur[y, x][c] = soma/(width*height)
+                    soma += img_entrada[yw, xw, c]
+            img_blur[y, x, c] = soma/(width*height)
   
   print (img_blur.shape)
   return img_blur
@@ -73,15 +73,15 @@ def separable_blur(img_entrada, width, height):
       for x in range(height//2, (h_img-height//2)): # pra cada coluna
         soma = 0
         for xw in range(x-width//2, x+width//2+1):
-          soma += img_entrada[y, xw][c]
-        img_blur[y, x][c] = soma/(width)
+          soma += img_entrada[y, xw, c]
+        img_blur[y, x, c] = soma/(width)
 
     for x in range(height//2, (h_img-height//2)): 
       for y in range(width//2, (w_img-width//2)): 
         soma = 0
         for yw in range(y-height//2, y+height//2+1):
-          soma += img_blur[yw, x][c]
-        img_blur[y, x][c] = soma/(height)
+          soma += img_blur[yw, x, c]
+        img_blur[y, x, c] = soma/(height)
   
   return img_blur
 
@@ -100,9 +100,9 @@ def integral_blur(img_entrada, width, height):
 
   def cap(numero):
     if numero >= w_img:
-       return w_img-1
+       return int(w_img-1)
     if numero >= h_img:
-       return h_img-1
+       return int(h_img-1)
     if numero < 0:
        return 0
     
@@ -110,18 +110,19 @@ def integral_blur(img_entrada, width, height):
 
     # passa somando os valores apenas nas linhas
     for y in range(0, w_img): # pra cada linha
-      img_integral [y, 0, c] = img_entrada[y, 0][c]
+      img_integral [y, 0, c] = img_entrada[y, 0, c]
       for x in range(1, h_img): # pra cada coluna menos a primeira
         # img integral é o pixel atual + a soma dos que estão acima e à esquerda dele
-        img_integral[y, x][c] = img_entrada[y, x][c] + img_integral[y, x-1][c]
+        img_integral[y, x, c] = img_entrada[y, x, c] + img_integral[y, x-1, c]
 
     # passa somando os valores já somados, agora verticalmente
     for y in range(1, w_img):
       #TODO: testar
-      img_integral [0, x][c] = img_entrada[0, x][c]
+      img_integral [0, x, c] = img_entrada[0, x, c]
       for x in range (0, h_img):
-        img_integral[y, x][c] = img_integral[y, x][c] + img_integral[y-1, x][c]
+        img_integral[y, x, c] = img_integral[y, x, c] + img_integral[y-1, x, c]
 
+    print (img_integral.shape)
 
     for y in range(width//2, (w_img-width//2)):
       for x in range(height//2, (h_img-height//2)):
@@ -179,23 +180,26 @@ def integral_blur(img_entrada, width, height):
           # cap() cuida disso
           upper_left, upper_right, lower_left, lower_right = True
 
+        print (img_integral.shape)
+        print (img_integral[cap(y+width//2), cap(x+width//2), c])
+
         if lower_right:
           # somo pixel dentro do canto inferior direito de uma janela
-          print (img_integral[cap(y+width//2), cap(x+width//2)][c])
+          print (img_integral[cap(y+width//2), cap(x+width//2), c])
 
-          soma = soma + img_integral[cap(y+width//2), cap(x+width//2)][c]
-
+          soma = soma + img_integral[cap(y+width//2), cap(x+width//2), c]
+        
         if upper_right:
           # subtraio o pixel que tá acima do canto superior direito de uma janela
-          soma = soma - img_integral[cap(y-width//2-1), cap(x+width//2)][c]
+          soma = soma - img_integral[cap(y-width//2-1), cap(x+width//2), c]
         
         if lower_left:
           # subtraio o pixel que tá à esquerda do canto inferior esquerdo de uma janela
-          soma = soma - img_integral[cap(y+width//2), cap(x-width//2-1)][c]
+          soma = soma - img_integral[cap(y+width//2), cap(x-width//2-1), c]
         
         if upper_left:
           # somo de novo o pixel à esquerda e acima da parte esquerda superior de uma janela
-          soma = soma + img_integral[cap(y-width//2+1), cap(x-width//2)][c]
+          soma = soma + img_integral[cap(y-width//2+1), cap(x-width//2), c]
 
         img_blur[y, x, c] = soma/(width*height)
 

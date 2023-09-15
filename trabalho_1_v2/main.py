@@ -46,7 +46,6 @@ def rotula (binarizada, largura_min, altura_min, n_pixels_min):
       for x in range (0, width_img-1):
         # só olha se for -1, se não nem olha
         if nova_matriz[x][y][0] == -1:
-          print (x, y)
           flood_fill(label, x, y) 
           label += 1
           
@@ -180,7 +179,7 @@ def main ():
 
     # Mostra os objetos encontrados.
     for c in componentes:
-        cv2.rectangle (img_out, (c ['L'][1], c ['T'][0]), (c ['R'][1], c ['B'][0]), (0,0,255))
+        cv2.rectangle (img_out, (c ['L'], c ['T']), (c ['R'], c ['B']), (0,0,255))
 
     cv2.imshow ('02 - out', img_out)
     cv2.imwrite ('02 - out.png', img_out*255)

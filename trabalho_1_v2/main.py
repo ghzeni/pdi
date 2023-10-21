@@ -57,7 +57,7 @@ def rotula (binarizada, largura_min, altura_min, n_pixels_min):
     # após toda a matriz estar com os devidos labels, agrupamos as blobs
     # excluindo blobs pequenas demais
     for y in range (0, height_img-1):
-      for x in range (0, width_img-1):
+      for x in range (0, width_img-1):  
         # se a coord checada não é 0 (background)
         label_atual = nova_matriz[x][y][0]
         if label_atual != 0:

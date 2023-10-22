@@ -31,7 +31,7 @@ VISITED = 0.8
 
 #===============================================================================
 
-INPUT_IMAGE = 'trabalho_4/img/60.bmp'
+INPUT_IMAGE = 'trabalho_4/img/150.bmp'
 ENABLE_GUI = False
 LEAVE_OPEN = True
 OPEN_TIME = 1500
@@ -101,7 +101,7 @@ def label_blobs(img):
 
   for j in range (0, w_img):
     for i in range (0, h_img):
-      if img[i][j][0] == 0:
+      if img_out[i][j] == 0 and img_out[i][j] != VISITED:
         img_window = hp.get_window(img_out, i, j, 9)
 
         retval, img_out, mask, rect = cv2.floodFill(img_out, None, (j, i), VISITED)
@@ -110,7 +110,7 @@ def label_blobs(img):
         label+=1 
 
         # show_progress(img_out)
-  
+
   # back to BGR
   img_out = cv2.cvtColor (img_out, cv2.COLOR_GRAY2BGR)
   return blob_list, img_out
@@ -150,22 +150,34 @@ def remove_outliers(blob_list, outliers):
       blob_list_out.append(blob)
   return blob_list_out
 
-# repeat process of finding outliers, calculating mean and dp
-# until dp is smaller than 10% of mean
-def repeat_process(blob_list):
-  mean = calculate_mean(blob_list)
-  dp = calculate_dp(blob_list, mean)
+def repeat_process(all_blobs):
+  current_blobs = np.copy(all_blobs)
+  mean = calculate_mean(current_blobs)
+  dp = calculate_dp(current_blobs, mean)
+  outliers = find_outliers(current_blobs)
   i = 1
   print("Geração 1: X = ", mean, "dp = ", dp)
+  print("Outliers: ", outliers)
+
   while dp > mean * 0.1:
-    outliers = find_outliers(blob_list)
-    blob_list = remove_outliers(blob_list, outliers)
-    mean = calculate_mean(blob_list)
-    dp = calculate_dp(blob_list, mean)
+    outliers = find_outliers(current_blobs)
+    current_blobs = remove_outliers(current_blobs, outliers)
+    mean = calculate_mean(current_blobs)
+    dp = calculate_dp(current_blobs, mean)
     i += 1
     print("Geração ", i, ": X = ", mean, "dp = ", dp)
     print("Outliers: ", outliers)
-  return blob_list
+  return m.floor(mean)
+
+def separate_unsure_blobs(blob_list, rice_size):
+  blob_list_out = []
+  unsure_blobs = []
+  for blob in blob_list:
+    if blob["size"] > rice_size * 0.5 and blob["size"] < rice_size * 1.5:
+      blob_list_out.append(blob)
+    elif blob["size"] > rice_size * 1.5 or blob["size"] < rice_size * 0.5:
+      unsure_blobs.append(blob)
+  return blob_list_out, unsure_blobs
 
 #===============================================================================
 
@@ -190,7 +202,11 @@ def main ():
   img_step_two = gaussian_blur(img_step_one)
   img_step_three = all_thresholds(img_step_two)
   blob_list, img_step_four = label_blobs(img_step_three)
-  blob_list = repeat_process(blob_list)
+  rice_size = repeat_process(blob_list)
+  blob_list, unsure_blobs = separate_unsure_blobs(blob_list, rice_size)
+  print("Contagem atual: ", len(blob_list))
+  print("Contagem incerta: ", len(unsure_blobs))
+
 
   column_one = np.concatenate((img, img_step_four), axis=0)
   

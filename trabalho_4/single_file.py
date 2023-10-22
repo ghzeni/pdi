@@ -14,6 +14,7 @@ import cv2
 import math as m
 import helpers as hp
 import pdi as pdi
+import os
 
 #===============================================================================
 # ORDEM E PARAMETROS
@@ -24,21 +25,28 @@ THRESHOLD_TYPE = 'ADAPTIVE' # 'ADAPTIVE', 'OTSU' or 'SIMPLE'
 ADAPT_BLOCK = 11
 ADAPT_C = 3
 SIMPLE_THRESH = 0.6
+NOT_VISITED = 1.0
+VISITED = 0.8
 
 
 #===============================================================================
 
-INPUT_IMAGE = 'img/60.bmp'
+INPUT_IMAGE = 'trabalho_4/img/60.bmp'
 ENABLE_GUI = False
 LEAVE_OPEN = True
 OPEN_TIME = 1500
 
 #===============================================================================
 
-def show_progress (img, line):
-  cv2.imshow ('main.py:' + line, img)
-  cv2.waitKey ()
-  cv2.destroyWindow ('main.py:' + line)
+def show_progress(img):
+
+  if img is None:
+      print("Error: invalid image")
+      return
+  
+  cv2.imshow('show progress', img)
+  cv2.waitKey()
+  cv2.destroyWindow('show progress')
 
 #-------------------------------------------------------------------------------
 
@@ -81,23 +89,83 @@ def normalize (img):
 #===============================================================================
 ## SOLUÇÃO DESVIO PADRÃO
 
+def label_blobs(img):
 
-def count_rice (img):
-  desvio_padrao = 999
+  # grayscale
+  img_gray = cv2.cvtColor (img, cv2.COLOR_BGR2GRAY)
+  img_out = img_gray.copy()
   blob_list = []
+  h_img = img.shape[0] 
+  w_img = img.shape[1]
+  label = 1
 
+  for j in range (0, w_img):
+    for i in range (0, h_img):
+      if img[i][j][0] == 0:
+        img_window = hp.get_window(img_out, i, j, 9)
 
-#   pra cada pixel da imagem
-#   se é arroz
-#     blob = flood_fill (i, j)
-#     blob_list.add(blob)
-#  # blob_list cheia
-#  # calcula_media()
-#  #  return int
-#  # calcula_dp (blob_list, media)
-#  #  for blob in blob_list
-#  #    blob.dp = np.dp(tam, media)
-#  #  return blob_list
+        retval, img_out, mask, rect = cv2.floodFill(img_out, None, (j, i), VISITED)
+        
+        blob_list.append({"size": retval, "label": label, "dp": 0})
+        label+=1 
+
+        # show_progress(img_out)
+  
+  # back to BGR
+  img_out = cv2.cvtColor (img_out, cv2.COLOR_GRAY2BGR)
+  return blob_list, img_out
+
+def calculate_mean(blob_list):
+  mean = 0
+  for blob in blob_list:
+    mean += blob["size"]
+  mean = mean / len(blob_list)
+  return mean
+
+def calculate_dp(blob_list, mean):
+  """ Calcula o desvio padrão """
+  dp = 0
+  for blob in blob_list:
+    dp += (blob["size"] - mean)**2
+  dp = dp / len(blob_list)
+  dp = m.sqrt(dp)
+  return dp
+
+def find_outliers(blob_list):
+  """ Encontra o maior e o menor blob """
+  smaller = {"size": 999}
+  bigger = {"size": 0}
+  for blob in blob_list:
+    if blob["size"] < smaller["size"]:
+      smaller = blob
+    if blob["size"] > bigger["size"]:
+      bigger = blob
+  return [smaller, bigger]
+
+# remove bigger and smaller
+def remove_outliers(blob_list, outliers):
+  blob_list_out = []
+  for blob in blob_list:
+    if blob["label"] != outliers[0]["label"] and blob["label"] != outliers[1]["label"]:
+      blob_list_out.append(blob)
+  return blob_list_out
+
+# repeat process of finding outliers, calculating mean and dp
+# until dp is smaller than 10% of mean
+def repeat_process(blob_list):
+  mean = calculate_mean(blob_list)
+  dp = calculate_dp(blob_list, mean)
+  i = 1
+  print("Geração 1: X = ", mean, "dp = ", dp)
+  while dp > mean * 0.1:
+    outliers = find_outliers(blob_list)
+    blob_list = remove_outliers(blob_list, outliers)
+    mean = calculate_mean(blob_list)
+    dp = calculate_dp(blob_list, mean)
+    i += 1
+    print("Geração ", i, ": X = ", mean, "dp = ", dp)
+    print("Outliers: ", outliers)
+  return blob_list
 
 #===============================================================================
 
@@ -121,9 +189,10 @@ def main ():
   img_step_one = normalize(img_out)
   img_step_two = gaussian_blur(img_step_one)
   img_step_three = all_thresholds(img_step_two)
-  blob_list = pdi.label_blobs(img_step_three)
+  blob_list, img_step_four = label_blobs(img_step_three)
+  blob_list = repeat_process(blob_list)
 
-  column_one = np.concatenate((img, img_step_three), axis=0)
+  column_one = np.concatenate((img, img_step_four), axis=0)
   
   cv2.namedWindow('original - blurred - thresholded', cv2.WINDOW_NORMAL)
   cv2.resizeWindow('original - blurred - thresholded', 1440, 900)

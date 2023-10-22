@@ -78,3 +78,20 @@ def threshold (img_one, img_two, img_three, img_four):
     img_four_out = rc.all_thresholds(img_four)
 
     return img_one_out, img_two_out, img_three_out, img_four_out
+
+#-------------------------------------------------------------------------------
+
+def get_window(img, i, j, size=9):
+    # Calculate half of the window size
+    half_size = size // 2
+
+    # Calculate starting and ending indices for rows and columns
+    start_i = max(0, i - half_size)
+    end_i = min(img.shape[0], i + half_size + 1)
+    start_j = max(0, j - half_size)
+    end_j = min(img.shape[1], j + half_size + 1)
+
+    # Extract the window using array slicing
+    window = img[start_i:end_i, start_j:end_j]
+    
+    return window

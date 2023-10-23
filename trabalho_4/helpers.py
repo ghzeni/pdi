@@ -18,11 +18,12 @@ def show_progress (img, line):
 
 #-------------------------------------------------------------------------------
 
-def open_images (img_one_path, img_two_path, img_three_path, img_four_path):
+def open_images (img_one_path, img_two_path, img_three_path, img_four_path, img_five_path):
   img_one = cv2.imread (img_one_path)
   img_two = cv2.imread (img_two_path)
   img_three = cv2.imread (img_three_path)
   img_four = cv2.imread (img_four_path)
+  img_five = cv2.imread (img_five_path)
 
   if img_one is None:
       print ('Erro abrindo a imagem 1.\n')
@@ -36,62 +37,56 @@ def open_images (img_one_path, img_two_path, img_three_path, img_four_path):
   if img_four is None:
       print ('Erro abrindo a imagem 4.\n')
       sys.exit ()
+  if img_five is None:
+      print ('Erro abrindo a imagem 5.\n')
+      sys.exit ()
   
-  return img_one, img_two, img_three, img_four
+  return img_one, img_two, img_three, img_four, img_five
 
 #-------------------------------------------------------------------------------
 
-def images_to_float (img_one, img_two, img_three, img_four):
+def images_to_float (img_one, img_two, img_three, img_four, img_five):
   img_one = img_one.astype (np.float32) / 255
   img_two = img_two.astype (np.float32) / 255
   img_three = img_three.astype (np.float32) / 255
   img_four = img_four.astype (np.float32) / 255
+  img_five = img_five.astype (np.float32) / 255
   
-  return img_one, img_two, img_three, img_four
+  return img_one, img_two, img_three, img_four, img_five
 
 #-------------------------------------------------------------------------------
 
-def create_copy (img_one, img_two, img_three, img_four):
+def create_copy (img_one, img_two, img_three, img_four, img_five):
   img_one_out = np.copy(img_one)
   img_two_out = np.copy(img_two)
   img_three_out = np.copy(img_three) 
   img_four_out = np.copy(img_four)
+  img_five_out = np.copy(img_five)
 
-  return img_one_out, img_two_out, img_three_out, img_four_out
+  return img_one_out, img_two_out, img_three_out, img_four_out, img_five_out
 
 #-------------------------------------------------------------------------------
 
-def remove_noise (img_one, img_two, img_three, img_four):
+def remove_noise (img_one, img_two, img_three, img_four, img_five):
     img_one_out = rc.gaussian_blur(img_one)
     img_two_out = rc.gaussian_blur(img_two) 
     img_three_out = rc.gaussian_blur(img_three)
     img_four_out = rc.gaussian_blur(img_four)
+    img_five_out = rc.gaussian_blur(img_five)
 
-    return img_one_out, img_two_out, img_three_out, img_four_out
+    return img_one_out, img_two_out, img_three_out, img_four_out, img_five_out
 
 #-------------------------------------------------------------------------------
 
-def threshold (img_one, img_two, img_three, img_four):
+def threshold (img_one, img_two, img_three, img_four, img_five):
     img_one_out = rc.all_thresholds(img_one)
     img_two_out = rc.all_thresholds(img_two)
     img_three_out = rc.all_thresholds(img_three)
     img_four_out = rc.all_thresholds(img_four)
+    img_five_out = rc.all_thresholds(img_five)
 
-    return img_one_out, img_two_out, img_three_out, img_four_out
+    return img_one_out, img_two_out, img_three_out, img_four_out, img_five_out
 
 #-------------------------------------------------------------------------------
 
-def get_window(img, i, j, size=9):
-    # Calculate half of the window size
-    half_size = size // 2
 
-    # Calculate starting and ending indices for rows and columns
-    start_i = max(0, i - half_size)
-    end_i = min(img.shape[0], i + half_size + 1)
-    start_j = max(0, j - half_size)
-    end_j = min(img.shape[1], j + half_size + 1)
-
-    # Extract the window using array slicing
-    window = img[start_i:end_i, start_j:end_j]
-    
-    return window

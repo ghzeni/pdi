@@ -1,4 +1,0 @@
-https://docs.opencv.org/4.x/d7/d4d/tutorial_py_thresholding.html
-
-cv.ADAPTIVE_THRESH_MEAN_C: The threshold value is the mean of the neighbourhood area minus the constant C.
-cv.ADAPTIVE_THRESH_GAUSSIAN_C: The threshold value is a gaussian-weighted sum of the neighbourhood values minus the constant C.

@@ -50,21 +50,16 @@ OPEN_TIME = 1500
 
   # funcao nivel_verde(pixel)
     # bgr to hsv = cv.cvtColor(input_image, cv.COLOR_BGR2HSV
-    # get other flags: 
-    # import cv2 as cv
-    # flags = [i for i in dir(cv) if i.startswith('COLOR_')]
-    # print (flags)
+    # define range of green color in HSV
+    # lower_green = np.array([50 100 100])
+    # upper_green = np.array([70 255 255])
+    # threshold the HSV image to get only green colors
+    # mask = cv.inRange(hsv, lower_green, upper_green)
+    # mascara de verdice de 0 a 1 pra criar o alphablending
+    # rgb é mais fácil
 
 # pra HSV, matiz tem o intervalo [0, 179] -> 180 graus
 # saturação tem [0, 255] e a range do valor é [0, 255]
-
-# https://docs.opencv.org/4.x/df/d9d/tutorial_py_colorspaces.html
-# Object Tracking
-# Now that we know how to convert a BGR image to HSV, 
-# we can use this to extract a colored object. In HSV, 
-# it is easier to represent a color than in BGR color-space. 
-# In our application, we will try to extract a blue colored object. 
-# So here is the method:
 
 
 #===============================================================================

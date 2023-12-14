@@ -10,16 +10,17 @@ import timeit
 import numpy as np
 import cv2
 import math as m
+import json
+import unittest
 
 #===============================================================================
 
-INPUT_IMAGE =  'arroz.bmp'
-
+INPUT_IMAGE =  'arroz_input/arroz.bmp'
 NEGATIVO = False
-THRESHOLD = 0.8
-ALTURA_MIN = 15
-LARGURA_MIN = 15
-N_PIXELS_MIN = 30
+THRESHOLD = 0.81
+ALTURA_MIN = 5
+LARGURA_MIN = 5
+N_PIXELS_MIN = 20
 
 #===============================================================================
 
@@ -53,16 +54,45 @@ def flood_fill(matrix, label, row, col, width, height):
     if row < 0 or row >= height or col < 0 or col >= width:
       return
 
-    if matrix[row][col] != -1:
+    if matrix[row][col][0] != -1:
       return 
   
-    matrix[row][col] = label
+    matrix[row][col][0] = label
 
     flood_fill(matrix, label, row-1, col, width, height)
     flood_fill(matrix, label, row, col+1, width, height)
     flood_fill(matrix, label, row+1, col, width, height)
     flood_fill(matrix, label, row, col-1, width, height)
     return
+
+#-------------------------------------------------------------------------------
+
+def remover_mini_blobs(blob_list, largura_min, altura_min, n_pixels_min):
+
+  blist = []
+
+  for b in blob_list:
+    if (b['n_pixels'] > n_pixels_min and b['R'][1] - b['L'][1] >= largura_min and b['B'][0] - b['T'][0] >= altura_min):
+       blist.append(b)
+
+  return blist
+
+#-------------------------------------------------------------------------------
+
+def group_blobs(blob_list):
+  for b in blob_list:
+    for b2 in blob_list:
+      if b['label'] != b2['label']:
+        if b['T'][0] <= b2['T'][0] <= b['B'][0] or b['T'][0] <= b2['B'][0] <= b['B'][0]:
+          if b['L'][1] <= b2['L'][1] <= b['R'][1] or b['L'][1] <= b2['R'][1] <= b['R'][1]:
+            b['n_pixels'] += b2['n_pixels']
+            b['T'] = (min(b['T'][0], b2['T'][0]), min(b['T'][1], b2['T'][1]))
+            b['R'] = (max(b['R'][0], b2['R'][0]), max(b['R'][1], b2['R'][1]))
+            b['B'] = (max(b['B'][0], b2['B'][0]), max(b['B'][1], b2['B'][1]))
+            b['L'] = (min(b['L'][0], b2['L'][0]), min(b['L'][1], b2['L'][1]))
+            blob_list.remove(b2)
+            return group_blobs(blob_list)
+  return blob_list
 
 #-------------------------------------------------------------------------------
 
@@ -76,17 +106,15 @@ def rotula (binarizada, largura_min, altura_min, n_pixels_min):
   label = 1
   for row in range (0, height):
     for col in range (0, width):
-      if matrix[row][col] == -1:
+      if matrix[row][col][0] == -1:
         flood_fill(matrix, label, row, col, width, height)
         label += 1
         
   blob_list = []
 
-  # após toda a matriz estar com os devidos labels, agrupamos as blobs
-  # excluindo blobs pequenas demais
   for row in range (0, height):
     for col in range (0, width):  
-      label_atual = matrix[row][col]
+      label_atual = matrix[row][col][0]
       if label_atual != 0:
         if len(blob_list) != 0:
           label_existe = False
@@ -110,7 +138,7 @@ def rotula (binarizada, largura_min, altura_min, n_pixels_min):
         else:
           # se a blob_list for vazia
           blob = {
-            'label': matrix[row][col],
+            'label': matrix[row][col][0],
             'n_pixels': 1,
             'T': (row, col), 
             'R': (row, col), 
@@ -118,57 +146,60 @@ def rotula (binarizada, largura_min, altura_min, n_pixels_min):
             'L': (row, col), 
           }
           blob_list.append(blob)
-  
-  # print('122: ' + str(blob_list))
-  
-  # limpa as que forem mini-blobs demais pra ser uma blob
-  for b in blob_list:
-    if (b['n_pixels'] < n_pixels_min):
-      blob_list.remove(b)
-    elif (b['R'][1] - b['L'][1] > largura_min):
-      blob_list.remove(b)
-    elif (b['B'][0] - b['T'][0] > altura_min):
-      blob_list.remove(b)
-  
+
+  # excluimos blobs pequenas demais
+  blob_list = remover_mini_blobs(blob_list, largura_min, altura_min, n_pixels_min)
+
+  # agrupar blobs que se tocam
+  blob_list = group_blobs(blob_list)
+
   return blob_list
+
+#-------------------------------------------------------------------------------
+
+def count_rice(input_image, invert_image, threshold, min_height, min_width, min_pixel_amount):
+
+  img = cv2.imread (input_image)
+
+  if img is None:
+      print ('Erro abrindo a imagem.\n')
+      sys.exit ()
+
+  img = img.astype (np.float32) / 255
+
+  if invert_image:
+      img = 1 - img
+
+  imgb = binariza (img, threshold)
+
+  cv2.imwrite ('01 - binarizada.png', imgb.astype(np.int8) * 255)
+
+  start_time = timeit.default_timer ()
+  componentes = rotula (imgb, min_width, min_height, min_pixel_amount)
+  n_componentes = len (componentes)
+      
+  # Mostra os objetos encontrados.
+  for c in componentes:
+    cv2.rectangle (img, (c ['L'][1], c ['T'][0]), (c ['R'][1], c ['B'][0]), (0,0,255), 2)
+
+  return (n_componentes, timeit.default_timer () - start_time, img)
+
 
 #===============================================================================
 
 def main ():
+  output = count_rice(INPUT_IMAGE, NEGATIVO, THRESHOLD, ALTURA_MIN, LARGURA_MIN, N_PIXELS_MIN)
+  print ('Tempo: %f' % output[1])
+  print ('%d componentes detectados.' % output[0])
+    
+  cv2.namedWindow('02 - out', cv2.WINDOW_NORMAL)
+  cv2.resizeWindow('02 - out', 1440, 900)
+  cv2.imwrite ('02 - out.png', output[2]*255)
+  imgshow = cv2.imread('02 - out.png')
+  cv2.imshow ('02 - out', imgshow)
+  cv2.waitKey ()
+  cv2.destroyAllWindows ()
 
-    # Abre a imagem em escala de cinza.
-    global img, imgb
-    img = cv2.imread (INPUT_IMAGE, cv2.IMREAD_GRAYSCALE)
-    if img is None:
-        print ('Erro abrindo a imagem.\n')
-        sys.exit ()
-
-    img = img.reshape ((img.shape [0], img.shape [1], 1))
-    img = img.astype (np.float32) / 255
-
-    img_out = cv2.cvtColor (img, cv2.COLOR_GRAY2BGR)
-
-    if NEGATIVO:
-        img = 1 - img
-    imgb = binariza (img, THRESHOLD)
-    cv2.imwrite ('01 - binarizada.png', imgb.astype(np.int8) * 255)
-    imgshow = cv2.imread('01 - binarizada.png', 0)
-    cv2.imshow ('01 - binarizada', imgshow)
-
-    start_time = timeit.default_timer ()
-    componentes = rotula (imgb, LARGURA_MIN, ALTURA_MIN, N_PIXELS_MIN)
-    n_componentes = len (componentes)
-    print ('Tempo: %f' % (timeit.default_timer () - start_time))
-    print ('%d componentes detectados.' % n_componentes)
-
-    # Mostra os objetos encontrados.
-    for c in componentes:
-        cv2.rectangle (img_out, (c ['L'], c ['T']), (c ['R'], c ['B']), (0,0,255))
-
-    cv2.imshow ('02 - out', img_out)
-    cv2.imwrite ('02 - out.png', img_out*255)
-    cv2.waitKey ()
-    cv2.destroyAllWindows ()
 
 if __name__ == '__main__':
     main ()

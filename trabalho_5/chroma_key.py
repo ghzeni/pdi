@@ -21,8 +21,36 @@ ENABLE_GUI = False
 LEAVE_OPEN = True
 OPEN_TIME = 1500
 
-# TODO: tratar contornos usando gradientes
-# TODO: implementar alpha blending com máscara de verdice
+#===============================================================================
+
+# returns a mask of the greeness of the image, in a single channel, in a scale of 0 to 1
+def greeness_mask (img):
+  mask = np.zeros ((img.shape[0], img.shape[1]), dtype=np.float32)
+  imgf = img.astype (np.float32)/255
+
+  for i in range (img.shape[0]):
+    for j in range (img.shape[1]):
+      mask[i][j] = 1 + (imgf[i][j][0] + imgf[i][j][2])/2 - imgf[i][j][1]
+      if mask[i][j] < 0:
+        mask[i][j] = 0
+      elif mask[i][j] > 1:
+        mask[i][j] = 1
+
+  mask = mask / np.max (mask)
+  return mask
+
+def alpha_blend(fg, bg, mask):
+  blended = np.copy(bg)
+
+  for i in range (bg.shape[0]):
+    for j in range (bg.shape[1]):
+        blended[i][j] = (mask[i][j] * fg[i][j]) + ((1 - mask[i][j]) * bg[i][j])
+
+  # back to bgr
+  blended = cv2.cvtColor (blended, cv2.COLOR_RGB2BGR)
+
+  
+  return blended
 
 #===============================================================================
 
@@ -42,44 +70,25 @@ def main ():
 
   img_rgb = cv2.cvtColor (np.copy(img), cv2.COLOR_BGR2RGB)
 
-  lower_green =  np.array([0, 100, 0])
-  upper_green = np.array([100, 255, 100])
-
-  mask = cv2.inRange (img_rgb, lower_green, upper_green)
-
-  cv2.imwrite ('mask.png', mask)
-  cv2.imshow ('mask', cv2.imread ('mask.png'))
-  cv2.waitKey (0)
-  cv2.destroyAllWindows ()
-
-  masked_img = np.copy(img_rgb)
-  masked_img[mask != 0] = [0, 0, 0]
-
-  cv2.imwrite ('masked_img.png', masked_img)
-  cv2.imshow ('masked_img', cv2.imread ('masked_img.png'))
-  cv2.waitKey (0)
-  cv2.destroyAllWindows ()
-
+  mask = greeness_mask (img_rgb)
+  
   bg = cv2.imread ('background/bg_test.jpg')
   if bg is None:
       print ('Erro abrindo a imagem de fundo.\n')
       sys.exit ()
 
+  if img_rgb.shape[0] > bg.shape[0] or img_rgb.shape[1] > bg.shape[1]:
+    bg = cv2.resize (bg, (img_rgb.shape[1], img_rgb.shape[0]))
+
   bg = cv2.cvtColor (np.copy(bg), cv2.COLOR_BGR2RGB)
 
   bg = bg[0:img_rgb.shape[0], 0:img_rgb.shape[1]]
-  bg[mask == 0] = [0, 0, 0]
 
-  cv2.imwrite ('bg.png', bg)
-  cv2.imshow ('bg', cv2.imread ('bg.png'))
-  cv2.waitKey (0)
-  cv2.destroyAllWindows ()
-
-  combined = masked_img + bg
-  combined = cv2.cvtColor (np.copy(combined), cv2.COLOR_RGB2BGR)
-
-  cv2.imwrite ('combined.png', combined)
-  cv2.imshow ('combined', cv2.imread ('combined.png'))
+  # alphablending equation for blended = img_rgb, bg and using mask
+  blended = alpha_blend(img_rgb, bg, mask)
+  
+  cv2.imwrite ('blended.png', blended)
+  cv2.imshow ('blended', cv2.imread ('blended.png'))
   cv2.waitKey (0)
   cv2.destroyAllWindows ()
 
